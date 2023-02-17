@@ -1,5 +1,7 @@
 build_shapes <- function() {
 
+  sf::sf_use_s2(FALSE)
+
   lookup_areas <- readr::read_csv("inst/extdata/lookup/area_names/PCD_OA_LSOA_MSOA_LAD_MAY21_UK_LU.csv") %>% #not in package because huge
     dplyr::mutate(post_town = stringr::str_extract(pcd7, "^\\D+")) %>%
     dplyr::group_by(lsoa11cd, msoa11cd, ladcd, lsoa11nm, msoa11nm, ladnm) %>%
@@ -9,48 +11,37 @@ build_shapes <- function() {
   usethis::use_data(lookup_areas, overwrite = TRUE)
 
   shapes_lsoa <-
-    sf::st_read("inst/extdata/shapes/lsoa/lsoa.shp") %>%
+    sf::st_read("inst/extdata/shapes/lsoa/infuse_lsoa_lyr_2011_clipped/infuse_lsoa_lyr_2011_clipped.shp") %>%
+    dplyr::filter(substr(geo_code, 1,1)!='N') %>%
     sf::st_transform(crs = 4326) %>%
-    dplyr::rename(geo_id = LSOA11CD,
-                  geo_name = LSOA11NM) %>%
+    sf::st_simplify(preserveTopology = TRUE, dTolerance = 0.0005) %>%
+    dplyr::rename(geo_id = geo_code,
+                  geo_name = geo_label) %>%
     dplyr::select(geo_id, geo_name, geometry)
-
-  shapes_lsoa_scot <-
-    sf::st_read("inst/extdata/shapes/lsoa/output-area-2011-mhw/OutputArea2011_MHW.shp") %>%
-    sf::st_transform(crs = 4326) %>%
-    dplyr::rename(geo_id = code) %>%
-    mutate(geo_name = "") %>%
-    dplyr::select(geo_id, geo_name, geometry)
-
-  shapes_lsoa <- shapes_lsoa %>%
-    union_all(shapes_lsoa_scot)
 
   shapes_lad <-
-    sf::st_read("inst/extdata/shapes/la/LAD_DEC_2021_UK_BGC.shp") %>%
+    sf::st_read("inst/extdata/shapes/la/infuse_dist_lyr_2011_clipped/infuse_dist_lyr_2011_clipped.shp") %>%
     sf::st_transform(crs = 4326) %>%
-    dplyr::rename(geo_id = LAD21CD,
-                  geo_name = LAD21NM) %>%
-    dplyr::select(geo_id, geo_name, geometry) %>%
-    dplyr::left_join(
-      readr::read_rds("inst/extdata/stats/population/stats_population_lad.rds"), by = "geo_id"
-    )
-
+    dplyr::filter(substr(geo_code, 1,1) %in% c('E', 'W', 'S')) %>%
+    dplyr::rename(geo_id = geo_code,
+                  geo_name = geo_label) %>%
+    dplyr::select(geo_id, geo_name, geometry)
 
   shapes_msoa <-
-    sf::st_read("inst/extdata/shapes/msoa/msoa.shp") %>%
+    sf::st_read("inst/extdata/shapes/msoa/infuse_msoa_lyr_2011_clipped/infuse_msoa_lyr_2011_clipped.shp") %>%
     sf::st_transform(crs = 4326) %>%
-    dplyr::rename(geo_id = MSOA11CD,
-                  geo_name = MSOA11NM) %>%
-    dplyr::select(geo_id, geo_name, geometry) %>%
-    dplyr::left_join(
-      readr::read_rds("inst/extdata/stats/population/stats_population_msoa.rds"), by = "geo_id"
-    )
+    dplyr::filter(substr(geo_code, 1,1)!='N') %>%
+    sf::st_simplify(preserveTopology = TRUE, dTolerance = 0.0005) %>%
+    dplyr::rename(geo_id = geo_code,
+                  geo_name = geo_label) %>%
+    dplyr::select(geo_id, geo_name, geometry)
 
-  shapes_uk_coastline <- shapes_msoa %>%
-    dplyr::summarise(geometry = sf::st_union(geometry))
+  shapes_uk_coastline <-
+    sf::st_read("inst/extdata/shapes/coastline/merged_manual/merged_manual.shp") %>%
+    sf::st_transform(crs = 4326)
 
-  usethis::use_data(shapes_lad,
+
+  usethis::use_data(shapes_lsoa,
                     shapes_msoa,
-                    shapes_lsoa,
                     shapes_uk_coastline, overwrite = TRUE)
 }

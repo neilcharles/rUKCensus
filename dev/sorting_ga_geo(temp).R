@@ -10,44 +10,49 @@ ga_auth()
 
 account_list <- ga_account_list()
 
-ga_id <- account_list$viewId[184]
+all_geo <- account_list %>%
+  select(viewId) %>%
+  mutate(geo = purrr::map(.x = viewId, .f = ~
+                            google_analytics(.x,
+                                             date_range = c("2021-01-01", "2022-12-31"),
+                                             metrics = "sessions",
+                                             dimensions = c("city", "latitude", "longitude"),
+                                             filtersExpression = "ga:country==United Kingdom",
+                                             max = -1)
+                            ))
 
-ga <- google_analytics(ga_id,
-                       date_range = c("2020-01-01", "2021-12-31"),
-                       metrics = "sessions",
-                       dimensions = c("city", "latitude", "longitude"),
-                       filtersExpression = "ga:country==United Kingdom",
-                       max = -1)
-
-ga_rollup <- ga %>%
-  group_by(latitude, longitude) %>%
-  summarise(sessions = sum(sessions)) %>%
-  mutate(across(everything(), as.numeric)) %>%
-  filter(latitude != 0 & longitude != 0) %>%
+unique_geo <- all_geo %>%
+  tidyr::unnest(geo) %>%
+  group_by(city, latitude, longitude) %>%
+  summarise() %>%
   ungroup() %>%
+  mutate(across(c(latitude, longitude), as.numeric)) %>%
+  filter(!(latitude==0 & longitude==0)) %>%
   mutate(ga_location_id = row_number())
 
-ga_points <- gaHelpers::ga_to_points(ga_rollup)
+usethis::use_data(unique_geo)
+
+ga_points <- gaHelpers::ga_to_points(unique_geo)
 
 ga_points %>%
   leaflet() %>%
   addProviderTiles(provider = providers$OpenStreetMap) %>%
   addCircleMarkers()
 
-ga_demogs <- google_analytics(ga_id,
-                       date_range = c("2021-01-01", "2021-12-31"),
-                       metrics = "sessions",
-                       dimensions = c("userAgeBracket", "userGender"),
-                       filtersExpression = "ga:country==United Kingdom",
-                       max = -1)
-
-ga_demogs_match <- ga_demogs %>%
-  unite(age_gender, userAgeBracket, userGender) %>%
-  mutate(weight = sessions / sum(sessions)) %>%
-  select(-sessions) %>%
-  crossing(ga_rollup) %>%
-  mutate(sessions_weighted = sessions * weight) %>%
-  arrange(ga_location_id)
+# ga_demogs <- google_analytics(ga_id,
+#                        date_range = c("2021-01-01", "2021-12-31"),
+#                        metrics = "sessions",
+#                        dimensions = c("userAgeBracket", "userGender"),
+#                        filtersExpression = "ga:country==United Kingdom",
+#                        max = -1)
+#
+# ga_demogs_match <- ga_demogs %>%
+#   unite(age_gender, userAgeBracket, userGender) %>%
+#   mutate(weight = sessions / sum(sessions)) %>%
+#   select(-sessions) %>%
+#   crossing(ga_rollup) %>%
+#   mutate(sessions_weighted = sessions * weight) %>%
+#   arrange(ga_location_id)
 
 #Transform traffic to voronoi
 voronoi <- ga_points %>%
@@ -55,7 +60,7 @@ voronoi <- ga_points %>%
   sf::st_voronoi() %>%
   st_collection_extract() %>%
   st_sf() %>%
-  st_intersection(shapes_uk_coastline) %>%
+  st_intersection(rUKcensus::shapes_uk_coastline) %>%
   st_join(ga_points, join = st_contains) #join with original to get traffic back
 
 voronoi %>%
