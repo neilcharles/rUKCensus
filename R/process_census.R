@@ -76,9 +76,9 @@ process_facts <- function(){
     stop("Names didn't match")
   }
 
-  facts_2011 <- raw_wide
+  facts_lsoa_2011 <- raw_wide
 
-  usethis::use_data(facts_2011, overwrite = TRUE)
+  usethis::use_data(facts_lsoa_2011, overwrite = TRUE)
 
   # Run this if output contains list cols
   # test <- raw_all %>%
@@ -86,8 +86,19 @@ process_facts <- function(){
   #   dplyr::summarise(n = dplyr::n(), .groups = "drop") %>%
   #   dplyr::filter(n > 1L)
 
+  facts_ga_2011 <- facts_lsoa_2011 %>%
+    dplyr::left_join(lsoa_ga_lookup) %>%
+    select(-variable_density_number_of_persons_per_hectare) %>%
+    mutate(across(!geo_id & !geo_name & !ga_location_id & !ga_city, ~as.numeric(. * area_pct))) %>%
+    select(-area_pct, -geo_id, -geo_name) %>%
+    group_by(ga_location_id, ga_city) %>%
+    summarise(across(everything(), ~sum(.))) %>%
+    dplyr::filter(!is.na(ga_location_id))
+
+  usethis::use_data(facts_ga_2011, overwrite = TRUE)
 }
 
+#Segment LSOA level demographics
 create_segmentation <- function(){
 
   #Convert to % of population except for density columns
@@ -148,7 +159,6 @@ cluster_names <- tibble::tibble(
 clusters_lsoa_2011 <- mapdata %>%
   sf::st_drop_geometry() %>%
   left_join(cluster_names)
-
 
 usethis::use_data(clusters_lsoa_2011, overwrite = TRUE)
 

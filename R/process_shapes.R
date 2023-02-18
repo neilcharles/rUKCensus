@@ -17,7 +17,8 @@ build_shapes <- function() {
     sf::st_simplify(preserveTopology = TRUE, dTolerance = 0.0005) %>%
     dplyr::rename(geo_id = geo_code,
                   geo_name = geo_label) %>%
-    dplyr::select(geo_id, geo_name, geometry)
+    dplyr::select(geo_id, geo_name, geometry) %>%
+    st_make_valid()
 
   shapes_lad <-
     sf::st_read("inst/extdata/shapes/la/infuse_dist_lyr_2011_clipped/infuse_dist_lyr_2011_clipped.shp") %>%
@@ -25,7 +26,9 @@ build_shapes <- function() {
     dplyr::filter(substr(geo_code, 1,1) %in% c('E', 'W', 'S')) %>%
     dplyr::rename(geo_id = geo_code,
                   geo_name = geo_label) %>%
-    dplyr::select(geo_id, geo_name, geometry)
+    dplyr::select(geo_id, geo_name, geometry) %>%
+    st_make_valid()
+
 
   shapes_msoa <-
     sf::st_read("inst/extdata/shapes/msoa/infuse_msoa_lyr_2011_clipped/infuse_msoa_lyr_2011_clipped.shp") %>%
@@ -34,12 +37,13 @@ build_shapes <- function() {
     sf::st_simplify(preserveTopology = TRUE, dTolerance = 0.0005) %>%
     dplyr::rename(geo_id = geo_code,
                   geo_name = geo_label) %>%
-    dplyr::select(geo_id, geo_name, geometry)
+    dplyr::select(geo_id, geo_name, geometry) %>%
+    st_make_valid()
 
   shapes_uk_coastline <-
     sf::st_read("inst/extdata/shapes/coastline/merged_manual/merged_manual.shp") %>%
-    sf::st_transform(crs = 4326)
-
+    sf::st_transform(crs = 4326) %>%
+    st_make_valid()
 
   usethis::use_data(shapes_lsoa,
                     shapes_msoa,
