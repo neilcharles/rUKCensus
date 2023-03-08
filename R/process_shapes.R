@@ -4,7 +4,7 @@ build_shapes <- function() {
 
   lookup_areas <- readr::read_csv("inst/extdata/lookup/area_names/PCD_OA_LSOA_MSOA_LAD_MAY21_UK_LU.csv") %>% #not in package because huge
     dplyr::mutate(post_town = stringr::str_extract(pcd7, "^\\D+")) %>%
-    dplyr::group_by(lsoa11cd, msoa11cd, ladcd, lsoa11nm, msoa11nm, ladnm) %>%
+    dplyr::group_by(oa11cd, lsoa11cd, msoa11cd, ladcd, lsoa11nm, msoa11nm, ladnm) %>%
     dplyr::summarise() %>%
     dplyr::ungroup()
 

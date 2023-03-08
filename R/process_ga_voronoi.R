@@ -43,7 +43,7 @@ run_ga_voronoi <- function(){
   lsoa_ga_lookup <- ga_voronoi %>%
     sf::st_intersection(shapes_lsoa) %>%
     dplyr::mutate(intersect_area = sf::st_area(.)) %>%
-    group_by(geo_id) %>%
+    dplyr::group_by(geo_id) %>%
     dplyr::mutate(area_pct = intersect_area / sum(intersect_area)) %>%
     sf::st_drop_geometry() %>%
     dplyr::select(geo_id, geo_name, ga_location_id, city, area_pct) %>%
