@@ -6,6 +6,7 @@ run_ga_voronoi <- function(){
   account_list <- googleAnalyticsR::ga_account_list()
 
   all_geo <- account_list %>%
+    filter(viewName=="All Web Site Data") %>%
     dplyr::select(viewId) %>%
     dplyr::mutate(geo = purrr::map(.x = viewId, .f = ~
                               googleAnalyticsR::google_analytics(.x,

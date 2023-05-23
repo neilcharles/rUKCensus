@@ -114,10 +114,9 @@ process_facts <- function(){
 create_segmentation <- function(){
 
   #Convert to % of population except for density columns
-  pct_all <- facts_2011 %>%
+  pct_all <- facts_lsoa_2011 %>%
     mutate(across(!geo_id &
-                    !variable_all_usual_residents &
-                    !variable_density_number_of_persons_per_hectare,
+                    !variable_all_usual_residents,
                   ~./variable_all_usual_residents))
 
   segmentation_raw <- scale(
