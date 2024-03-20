@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------------
-# Run these functions to load the 2011 census raw data and create a segmentation
+# Run these functions to load the 2021 census raw data and create a segmentation
 #-------------------------------------------------------------------------------------
 
 process_facts <- function(){
@@ -12,23 +12,22 @@ process_facts <- function(){
     dplyr::select(-include)
 
   # Load England & Wales ---------------------------------------------------------
-  raw_ew <- tibble::tibble(filename = list.files(path = "inst/extdata/stats/2011/england_wales", pattern = ".*.csv", full.names = FALSE)) %>%
-    dplyr::mutate(data = purrr::map(.x = filename, .f = ~ readr::read_csv(glue::glue("inst/extdata/stats/2011/england_wales/{.x}"), col_types = readr::cols(.default = "c")))) %>%
-    dplyr::mutate(filename = stringr::str_extract(filename, "^[A-Z][A-Z]\\d\\d\\d")) %>%
+  raw_ew <- tibble::tibble(filename = list.files(path = "inst/extdata/stats/2021/england_wales", pattern = ".*-oa.csv", full.names = TRUE, recursive = TRUE)) |>
+    dplyr::mutate(data = purrr::map(.x = filename, .f = ~ readr::read_csv(.x), col_types = readr::cols(.default = "c"))) |>
     dplyr::filter(filename %in% var_names$filename)
 
-  raw_ew_long <- raw_ew %>%
+  raw_ew_long <- raw_ew |>
     dplyr::mutate(data2 = purrr::map(
       .x = data,
       .f = ~
         tidyr::pivot_longer(
           janitor::clean_names(.),
-          -c(date, geography, `geography_code`, `rural_urban`)
+          -c(date, geography, `geography_code`)
         )
-    )) %>%
-    dplyr::select(-data) %>%
-    tidyr::unnest(data2) %>%
-    dplyr::select(-date, -geography, -rural_urban) %>%
+    )) |>
+    dplyr::select(-data) |>
+    tidyr::unnest(data2) |>
+    dplyr::select(-date, -geography) |>
     dplyr::rename(geo_id = geography_code,
                   eng_wa_name = name) %>%
     dplyr::left_join(dplyr::select(var_names, filename, eng_wa_name, name)) %>%
